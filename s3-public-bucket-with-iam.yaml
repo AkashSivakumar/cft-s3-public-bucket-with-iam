@@ -1,0 +1,57 @@
+Parameters:
+  paramBucketName:
+    Type: String
+    Description: Bucket Name
+Resources:
+  S3Bucket:
+    Type: 'AWS::S3::Bucket'
+    DeletionPolicy: Retain
+    Properties:
+      AccessControl: PublicRead
+      BucketName: !Ref paramBucketName
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+  S3User:
+    Type: AWS::IAM::User
+    DeletionPolicy: Retain
+    Properties:
+      UserName: !Sub ${S3Bucket}-Bucket-Full-Access-User
+      Policies:
+        - PolicyName: bucket-access
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+            - Effect: Allow
+              Action:
+              - s3:*
+              Resource:
+                - !Sub arn:aws:s3:::${S3Bucket}
+                - !Sub arn:aws:s3:::${S3Bucket}/*
+  
+  AttachmentsBucketAllowPublicReadPolicy:
+    Type: AWS::S3::BucketPolicy
+    DeletionPolicy: Retain
+    Properties:
+      Bucket: !Ref S3Bucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - 's3:GetObject'
+            Resource:
+              - !Join ['/', [!GetAtt [S3Bucket, Arn], '*']]
+            Principal: '*'
+Outputs:
+  Bucket3Name:
+    Value: !Ref 'S3Bucket'
+    Description: Name of the Amazon S3 bucket.
+  S3BucketSecureURL:
+    Value: !Join ['', ['https://', !GetAtt [S3Bucket, DomainName]]]
+    Description: Domain Name of the Amazon S3 bucket
+  BucketName:
+    Value: !Ref S3Bucket
+  User:
+    Value: !Ref S3User
